@@ -183,3 +183,20 @@ def test_every_credited_source_has_an_attribution():
         assert repo in readme, f"{repo} is vendored from but not credited in README.md"
     assert re.search(r"https://github\.com/[A-Za-z0-9-]+\)", readme), \
         "README credit section has no linked GitHub handles"
+
+
+def test_claude_md_stays_a_rulebook():
+    """CLAUDE.md is loaded into context every session in this repo, so it is the one
+    file that is always paid for. It carries rules; justification belongs in
+    .agents/adr/ where it is read once, when someone is changing a rule rather than
+    following one. Same discipline the repo already applies to SKILL.md routers."""
+    lines = (REPO / "CLAUDE.md").read_text(encoding="utf-8").splitlines()
+    assert len(lines) <= 90, (
+        f"CLAUDE.md is {len(lines)} lines; move justification into .agents/adr/"
+    )
+
+
+def test_adrs_referenced_from_claude_md_exist():
+    text = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    for rel in set(re.findall(r"\((\.agents/adr/[\w./-]+\.md)\)", text)):
+        assert (REPO / rel).is_file(), f"CLAUDE.md links missing ADR {rel}"
