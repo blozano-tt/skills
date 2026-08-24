@@ -1,0 +1,102 @@
+# Tenstorrent code-review skills
+
+Agent Skills carrying Tenstorrent domain knowledge into pull-request review, so an automated
+reviewer catches what a generic one cannot: CB ownership UB, race hazards, L1 footprint discipline,
+trace-capture safety, precision policy, CCL topology.
+
+Built for [gh-aw](https://github.com/githubnext/gh-aw) agentic workflows, and usable as a Claude
+Code plugin or from Codex.
+
+## Install
+
+In a gh-aw workflow, pin the skills you want:
+
+```yaml
+skills:
+  - blozano-tt/skills/tt-review-core@<sha>
+  - blozano-tt/skills/ttnn-op-kernel-review@<sha>
+  - blozano-tt/skills/tt-l1-memory-review@<sha>
+```
+
+Pins resolve by skill **name**, not path — the bucket a skill lives in is invisible to the
+resolver, so skills can move between buckets without breaking a pin. Always pin a 40-character SHA:
+a pin that fails to resolve is reported as a non-fatal warning, so a typo degrades the review
+silently rather than failing the run.
+
+As a Claude Code plugin, install from the marketplace manifest in `.claude-plugin/`.
+
+See `.github/workflows/tt-pr-review.md` for a complete worked workflow.
+
+## How they compose
+
+Load `tt-review-core` first — it carries the severity vocabulary, the evidence rule, the scope
+rules, and the do-not-flag guards that every other skill assumes and does not restate. Then load
+**at most two** domain skills. A reviewer holding fourteen checklists applies all of them shallowly.
+
+`tt-review-router` maps changed paths to the right subset.
+
+## Reference
+
+### common — cross-cutting review discipline
+
+| Skill | Reviews |
+|---|---|
+| `tt-review-core` | The shared contract: severity, evidence, scope, output shape, false-positive guards |
+| `tt-review-router` | Maps changed paths to the domain skills that apply *(user-invoked)* |
+| `tt-test-coverage-review` | PCC bars, tile-boundary cases, program-cache tests, regression tests on bug fixes |
+| `tt-perf-claim-review` | Whether a stated performance number is supported by its measurement |
+| `tt-comment-hygiene-review` | Iteration-journey comments, tribal knowledge, magic values, op docstrings |
+
+### models — model bringup, TTNN consumers
+
+| Skill | Reviews |
+|---|---|
+| `tt-model-bringup-review` | Residual contract, QKV topology, logical batch vs tile padding, hidden host fallbacks |
+| `tt-multichip-ccl-review` | `num_links` vs topology, bias before all-reduce, distributed RMSNorm, gather axes |
+| `tt-trace-review` | Capture safety, program-cache warmup signatures, device-owned autoregressive state |
+| `tt-precision-review` | Per-tensor-group dtype policy, the prefill/decode cache asymmetry, PCC-collapse triage |
+
+### ttnn — TTNN op authors
+
+| Skill | Reviews |
+|---|---|
+| `ttnn-op-kernel-review` | The eight structural categories: init, TRISC sync, `tile_regs`, CB UB, work split, semaphores, control flow, in-place |
+
+### metal — tt-metal host and kernel infrastructure
+
+| Skill | Reviews |
+|---|---|
+| `tt-l1-memory-review` | Buffer inventory discipline, data-movement tiers, CB sizing, accumulator capacity |
+
+### llk — low-level kernels
+
+| Skill | Reviews |
+|---|---|
+| `llk-race-audit-review` | Nine race hazard classes and the cross-class seams, under a monotonic join contract |
+| `llk-perf-audit-review` | Static Tensix perf under a provenance lens and a semantic-equivalence gate |
+
+### inference — serving
+
+| Skill | Reviews |
+|---|---|
+| `tt-vllm-serving-review` | Generator contracts, plugin registration, the `tt_data_parallel` ambiguity |
+
+### meta — repo maintenance
+
+| Skill | Reviews |
+|---|---|
+| `tt-skills-upstream-audit` | Drift between vendored skills and their upstream sources *(user-invoked)* |
+
+## This repo is an aggregation
+
+These skills are vendored from four sources — `tt-buddy`, `tt_ops_code_gen`, tt-metal's `.agents`
+tree, and tt-llk's `.claude` tree. Provenance and author attribution are in
+[`SOURCES.md`](SOURCES.md); every skill records its upstreams in `metadata.upstream`.
+
+Vendored copies rot as upstreams move. `tt-skills-upstream-audit` checks for that, and
+[`CLAUDE.md`](CLAUDE.md) carries the invariants for maintainers — including the **disclosure gate
+that applies to every re-vendor**.
+
+## Licence
+
+Apache-2.0, as are all four upstream sources.
