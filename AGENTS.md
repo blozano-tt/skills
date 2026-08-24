@@ -117,6 +117,12 @@ Enforced by `test_review_path_scripts_are_stdlib_only` and `test_agents_md_match
 is user-invoked maintenance tooling, never pinned by a review workflow, and it degrades to a warning
 rather than a crash when either is missing.
 
+**A `references/` path may only point inside its own skill folder.** gh-aw copies one folder, so a
+pointer at a sibling skill's reference file resolves to nothing when that skill is pinned alone.
+Where two skills genuinely need the same reference, **duplicate it** and add the path to
+`DUPLICATED` in the test suite, which asserts the copies stay identical. Duplication is the price of
+self-containment; drift is the risk, so it is enforced rather than trusted.
+
 **Cross-skill references are prose, not imports.** Skills say "assumes `tt-review-core`" and point
 at each other by name. That is a documented composition expectation the workflow satisfies by
 pinning both — not a load-bearing link. A skill pinned alone still works; it just restates less.

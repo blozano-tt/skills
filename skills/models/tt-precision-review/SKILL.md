@@ -14,6 +14,9 @@ metadata:
     - repo: tenstorrent/tt_ops_code_gen
       ref: e9c9417eee23c6783b5e72d6a2eed9f75f389fc4
       path: skills/numeric-formats-metal/SKILL.md
+    - repo: tenstorrent/tt-metal
+      ref: ce91f33c0c7184618d60553e4b32910c5ebdbfaa
+      path: tech_reports/Handling_Special_Value/special_values.md
 ---
 
 # Precision and fidelity review
@@ -49,6 +52,16 @@ Those two pull in opposite directions, which is why "just cast everything to the
 and gets read as "BFP8 does not work here." Flag a BF16 fallback that has no stated blocker — an
 acceptable fallback names a correctness failure, an op-contract limit, or a measured same-context
 win that includes the SDPA and cache cost.
+
+## Special values
+
+Tensix is **not fully IEEE compliant** for NaN and Inf, and the FPU and SFPU differ from each other
+— `0 x Inf` and `Inf - Inf` are defined NaN on the SFPU and unspecified on the FPU. Ops outside
+those tables treat specials as ordinary numbers, so "IEEE says so" is not an argument about a TT
+kernel in either direction. Denormals flush to zero.
+
+Read `references/special-values.md` when a diff fuses, decomposes, or moves an expression between
+engines, or when a PCC collapse might be special-value poisoning rather than precision loss.
 
 ## PCC collapse means a bug, not a precision limit
 

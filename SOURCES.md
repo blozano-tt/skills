@@ -85,6 +85,7 @@ Regenerate it after any re-vendor rather than editing by hand.
 | `tt-vllm-serving-review` | `tenstorrent/tt-metal` | `.agents/skills/vllm-integration/SKILL.md` | `d58cb341c703` | Mark O'Connor, Tomasz Cheda, tchedaTT |
 | `tt-vllm-serving-review` | `tenstorrent/tt-buddy` | `knowledge/recipes/vllm` | `ba9021417442` | Pavle Petrovic, Viktor Pus |
 | `llk-perf-audit-review` | `tenstorrent/tt-metal` | `tt_metal/tt-llk/.claude/skills/perf-optimization-audit` | `ce91f33c0c71` | Filip Vranic |
+| `llk-perf-audit-review` | `tenstorrent/tt-metal` | `tech_reports/Handling_Special_Value/special_values.md` | `ce91f33c0c71` | Bryan Wilder Field Lozano, Jason Davies, Milos Trajkovic, Nemanja Divnic |
 | `llk-race-audit-review` | `tenstorrent/tt-metal` | `tt_metal/tt-llk/.claude/skills/race-audit-all` | `ce91f33c0c71` | Anil Mahmud |
 | `llk-race-audit-review` | `tenstorrent/tt-metal` | `.github/bug_checker/rules/llk-stale-hw-config-state.md` | `fb5c6cfa6f08` | blozano-tt |
 | `tt-l1-memory-review` | `tenstorrent/tt_ops_code_gen` | `references/l1-footprint-discipline.md` | `e9c9417eee23` | Marko Staletovic |
@@ -99,6 +100,7 @@ Regenerate it after any re-vendor rather than editing by hand.
 | `tt-precision-review` | `tenstorrent/tt-metal` | `.agents/skills/datatype-sweep/SKILL.md` | `d58cb341c703` | Mark O'Connor |
 | `tt-precision-review` | `tenstorrent/tt_ops_code_gen` | `references/precision_convention.md` | `e9c9417eee23` | Djordje Nijemcevic |
 | `tt-precision-review` | `tenstorrent/tt_ops_code_gen` | `skills/numeric-formats-metal/SKILL.md` | `e9c9417eee23` | Marko Staletovic |
+| `tt-precision-review` | `tenstorrent/tt-metal` | `tech_reports/Handling_Special_Value/special_values.md` | `ce91f33c0c71` | Bryan Wilder Field Lozano, Jason Davies, Milos Trajkovic, Nemanja Divnic |
 | `tt-trace-review` | `tenstorrent/tt-metal` | `.agents/skills/tt-enable-tracing/SKILL.md` | `d58cb341c703` | Mark O'Connor, Tomasz Cheda |
 | `ttnn-op-kernel-review` | `tenstorrent/tt_ops_code_gen` | `references/static-analysis-checklist.md` | `e9c9417eee23` | Aleksandar Stancov, Marko Staletovic |
 | `ttnn-op-kernel-review` | `tenstorrent/tt_ops_code_gen` | `skills/debug-ttnn-op` | `e9c9417eee23` | Marko Staletovic |
@@ -111,3 +113,7 @@ Regenerate it after any re-vendor rather than editing by hand.
 > **Five rows are provisional.** The `bug_checker` rules from tt-metal PR 54114 are pinned at the
 > PR head rather than `main`, because that PR is still open. Re-pin them when it merges —
 > `tt-skills-upstream-audit` flags the rows once the branch is deleted.
+
+> `references/special-values.md` is intentionally duplicated in two skill folders. gh-aw copies a
+> single skill folder, so a shared reference cannot live in a sibling skill. The test suite asserts
+> the copies stay identical.

@@ -7,6 +7,9 @@ metadata:
     - repo: tenstorrent/tt-metal
       ref: ce91f33c0c7184618d60553e4b32910c5ebdbfaa
       path: tt_metal/tt-llk/.claude/skills/perf-optimization-audit
+    - repo: tenstorrent/tt-metal
+      ref: ce91f33c0c7184618d60553e4b32910c5ebdbfaa
+      path: tech_reports/Handling_Special_Value/special_values.md
 ---
 
 # LLK performance audit review
@@ -51,6 +54,12 @@ match the original's NaN and −0.0 behaviour, and frequently does not.
 
 If equivalence cannot be established, the finding is a **suggestion requiring test confirmation** —
 never a confident win.
+
+**Know what the hardware actually does before asserting equivalence.** Tensix is not fully IEEE
+compliant here, and the FPU and SFPU differ: `0 x Inf` and `Inf - Inf` are defined NaN on the SFPU
+and unspecified on the FPU, and ops outside those tables treat specials as ordinary numbers. So a
+rewrite that moves an expression between engines can change special-value output while looking
+arithmetically identical. `tt-precision-review`'s `references/special-values.md` has the tables.
 
 ## False-positive guards
 
