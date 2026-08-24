@@ -76,10 +76,15 @@ def latest(repo: str, path: str, branch: str | None = None) -> dict | None:
 
 
 def authors(repo: str, path: str, branch: str | None = None, limit: int = 100) -> list[str]:
+    """Contributors to `path`, most commits first. Prefers the GitHub login over the
+    commit author name -- attribution should point at an account someone can follow,
+    not a display string that may not resolve to anyone."""
     q = f"repos/{repo}/commits?path={path}&per_page={limit}"
     if branch:
         q += f"&sha={branch}"
-    raw = gh("api", q, "--jq", "[.[].commit.author.name] | unique | .[]")
+    raw = gh("api", q, "--jq",
+             "[.[] | .author.login // .commit.author.name] | group_by(.) "
+             "| sort_by(-length) | .[] | .[0]")
     return [a for a in (raw or "").splitlines() if a]
 
 

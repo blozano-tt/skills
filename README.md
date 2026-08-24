@@ -87,11 +87,52 @@ rules, and the do-not-flag guards that every other skill assumes and does not re
 |---|---|
 | `tt-skills-upstream-audit` | Drift between vendored skills and their upstream sources *(user-invoked)* |
 
-## This repo is an aggregation
+## Credit
 
-These skills are vendored from four sources — `tt-buddy`, `tt_ops_code_gen`, tt-metal's `.agents`
-tree, and tt-llk's `.claude` tree. Provenance and author attribution are in
-[`SOURCES.md`](SOURCES.md); every skill records its upstreams in `metadata.upstream`.
+**This repo is an aggregation. Almost none of the knowledge in it is ours.** The skills here are
+vendored, reshaped and re-framed from work other people did — often work that took years of
+debugging to learn. The structure is borrowed too.
+
+Everything below was consulted while building this, whether or not content was ultimately taken.
+Primary author is the top contributor to that path by commit count; see [`SOURCES.md`](SOURCES.md)
+for the full per-skill list, which credits **every** contributor to each path, not just the primary
+one.
+
+### Content sources
+
+| Source | Primary author | What came from it |
+|---|---|---|
+| [`tenstorrent/tt-buddy`](https://github.com/tenstorrent/tt-buddy) — `skills/` | [@ppetrovicTT](https://github.com/ppetrovicTT) | The reviewer contract: evidence rule, severity taxonomy, read-past-the-diff discipline, the reviewer cast |
+| [`tenstorrent/tt-buddy`](https://github.com/tenstorrent/tt-buddy) — `knowledge/` | [@viktorpusTT](https://github.com/viktorpusTT) | CCL and matmul knowledge, vLLM recipes |
+| [`tenstorrent/tt_ops_code_gen`](https://github.com/tenstorrent/tt_ops_code_gen) | [@mstaletovicTT](https://github.com/mstaletovicTT) | The eight-category structural kernel checklist, L1 footprint discipline, memory and precision references |
+| [`tt-metal`](https://github.com/tenstorrent/tt-metal) — `.agents` | [@yieldthought](https://github.com/yieldthought) | Optimization rules, multichip, tracing, datatype sweep, vLLM integration — and the Codex PR-review skill this catalogue's output format came from |
+| [`tt-metal`](https://github.com/tenstorrent/tt-metal) — `tt-llk/.claude` | [@ndivnicTT](https://github.com/ndivnicTT) | The LLK audit suite as a whole |
+| ⤷ `race-audit-all` | [@amahmudTT](https://github.com/amahmudTT) | Nine hazard classes, the monotonic JOIN contract, per-architecture divergence |
+| ⤷ `perf-optimization-audit` | [@fvranicTT](https://github.com/fvranicTT) | The provenance lens, semantic-equivalence gate, SIMD false-positive guards |
+| [`tt-metal`](https://github.com/tenstorrent/tt-metal) — `.github/bug_checker` | [@stevendae](https://github.com/stevendae) | Rules distilled from ~1,398 merged fix PRs: program-cache correctness, op validation, CCL ring buffers, stale LLK config |
+| [`tt-metal`](https://github.com/tenstorrent/tt-metal) — `tech_reports/Handling_Special_Value` | [@ttmtrajkovic](https://github.com/ttmtrajkovic) | NaN/Inf/denormal semantics and the FPU/SFPU divergence |
+
+### Structure and tooling
+
+| Source | Primary author | What came from it |
+|---|---|---|
+| [`mattpocock/skills`](https://github.com/mattpocock/skills) | [@mattpocock](https://github.com/mattpocock) | **The shape of this repo.** Bucketed `skills/<bucket>/<name>/`, progressive disclosure, trigger-style descriptions, `in-progress/` and `deprecated/`, invocation bifurcation, changesets, the install-block convention |
+| [`githubnext/gh-aw`](https://github.com/githubnext/gh-aw) | [@dsyme](https://github.com/dsyme), [@pelikhan](https://github.com/pelikhan), [@mnkiefer](https://github.com/mnkiefer) | The consumer. `skills:` frontmatter, `safe-outputs`, and the `mattpocock-skills-reviewer` triage pattern the reference workflow follows |
+
+### Consulted, little or nothing taken
+
+| Source | Primary author | Outcome |
+|---|---|---|
+| [`tenstorrent/tt-ai-workflow`](https://github.com/tenstorrent/tt-ai-workflow) — `examples/kernel_gen` | [@rlesliehurdTT](https://github.com/rlesliehurdTT) | Reviewed in full. Its special-values documentation pointed us at the public tt-metal tech report, which we used instead. The generation pipeline, templates, and API reference are about *producing* kernels rather than reviewing them, so they were left alone |
+
+**If your work is here and the attribution is wrong, thin, or you would rather it were not — open an
+issue and we will fix or remove it.** Everything vendored is Apache-2.0, but licence compliance and
+proper credit are different things, and we care about the second one.
+
+## Provenance and drift
+
+Every skill records its upstreams in `metadata.upstream`; [`SOURCES.md`](SOURCES.md) is generated
+from that.
 
 Vendored copies rot as upstreams move. `tt-skills-upstream-audit` checks for that, and
 [`CLAUDE.md`](CLAUDE.md) carries the invariants for maintainers — including the **disclosure gate

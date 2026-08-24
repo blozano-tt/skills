@@ -170,3 +170,16 @@ def test_review_path_scripts_are_stdlib_only(script):
         "dataclasses", "collections", "itertools", "functools", "__future__", "textwrap",
     }
     assert not third_party, f"{script}: non-stdlib imports on the review path: {third_party}"
+
+
+def test_every_credited_source_has_an_attribution():
+    """Attribution is not decoration: every repo we vendored from must appear in the
+    README credit section with a linked GitHub handle. A source added to a skill's
+    metadata.upstream but never credited is the failure this guards against."""
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    repos = {e["repo"] for p in ALL
+             for e in ((frontmatter(p).get("metadata") or {}).get("upstream") or [])}
+    for repo in repos:
+        assert repo in readme, f"{repo} is vendored from but not credited in README.md"
+    assert re.search(r"https://github\.com/[A-Za-z0-9-]+\)", readme), \
+        "README credit section has no linked GitHub handles"
