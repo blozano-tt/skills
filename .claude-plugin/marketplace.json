@@ -1,0 +1,13 @@
+{
+  "name": "blozano-tt-skills",
+  "owner": {
+    "name": "blozano-tt"
+  },
+  "plugins": [
+    {
+      "name": "tt-review-skills",
+      "source": "./",
+      "description": "Tenstorrent domain-knowledge code-review skills for gh-aw, Claude Code and Codex."
+    }
+  ]
+}
