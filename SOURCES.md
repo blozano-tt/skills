@@ -46,12 +46,25 @@ machine and was not available to copy, so the behaviour was reconstructed from i
 (convert `path:line` and `path#Lline` to commit permalinks, normalise backtick-wrapped refs). It is
 not a copy and may differ in edge cases.
 
-## The bug_checker rules are different evidence
+## The bug_checker rules are different evidence — about frequency, not mechanism
 
 Most of this catalogue is expert-authored guidance. The `.github/bug_checker/rules` material is
-distilled from an audit of roughly 1,398 merged `fix`-labelled tt-metal PRs. For a *review* skill
-that is stronger grounding — "this shipped 74 times" beats "an expert says watch for it" — so where
-the two disagree on emphasis, the bug_checker framing wins.
+distilled from an audit of roughly 1,398 merged `fix`-labelled tt-metal PRs.
+
+**What that establishes is which failures actually occur, and how often.** "This shipped 74 times" is
+real evidence about *what to prioritise* — it is why op-level input validation earned a category of
+its own rather than a bullet.
+
+**What it does not establish is that any given rule's technical content is right.** Frequency data
+says a class of bug is common; it says nothing about whether the rule's description of the mechanism
+is accurate. Those are different claims, and volume of provenance does not transfer from the first
+to the second.
+
+**So there is no precedence rule.** An earlier version of this file said that where bug_checker and
+expert guidance disagree, bug_checker wins. That was wrong, and four defects entered this repo behind
+it — see the corrections below. On a technical conflict, neither source wins by provenance: **read
+the code the rule describes.** Where that is not possible, `tt-review-core`'s ground-or-abstain rule
+applies to maintainers exactly as it applies to reviewers.
 
 ## Corrections to upstream sources
 

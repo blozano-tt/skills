@@ -1,10 +1,8 @@
 # Maintaining this repo
 
-Rules for working on the skill catalogue. Reasoning lives in `.agents/adr/` — read the relevant ADR
-before *changing* a rule, not before following one.
-
-This repo is an **aggregation**: vendored copies from four other repositories, two of them private.
-Copies rot, and provenance is load-bearing.
+Rules for the skill catalogue. Reasoning lives in `.agents/adr/` — read the relevant ADR before
+*changing* a rule, not before following one. This repo is an **aggregation**: vendored copies from
+four repositories, two private. Copies rot, and provenance is load-bearing.
 
 ## Vendoring
 
@@ -16,12 +14,15 @@ Two upstreams are private; this repo is public. When bringing text across, strip
    instructions.
 3. **Anything a disclosure owner asks you to strip.** Their call, not yours.
 
-**Architecture detail stays, including Quasar.** Do not re-expand this scope by instinct — see
-[ADR-0001](.agents/adr/0001-vendoring-scope.md), which records an abstention that was tried and
-reversed.
+**Architecture detail stays, including Quasar** — do not re-expand this scope by instinct. See
+[ADR-0001](.agents/adr/0001-vendoring-scope.md), recording an abstention tried and reversed.
 
-Applies to **every re-vendor**, not just the initial import. `tt-skills-upstream-audit` therefore
-reports and proposes but never auto-applies.
+**Vendoring is not endorsement.** No source wins a technical disagreement by provenance, however
+well-evidenced; check a rule against the code it describes first. Four defects entered behind a
+precedence rule that said otherwise — see `SOURCES.md`.
+
+All of this applies to **every re-vendor**, which is why `tt-skills-upstream-audit` proposes but
+never auto-applies.
 
 ## Self-containment
 
@@ -33,8 +34,7 @@ tooling, non-stdlib Python, or a symlink.
   same reference, duplicate it and add the path to `DUPLICATED` in the test suite, which asserts the
   copies stay identical.
 - Cross-skill mentions are prose, not imports. A skill pinned alone still works.
-- **`meta/` is the single exemption** — maintenance tooling, user-invoked, never pinned by a review
-  workflow.
+- **`meta/` is the single exemption** — user-invoked maintenance tooling, never pinned by a review.
 
 See [ADR-0002](.agents/adr/0002-self-containment.md).
 
