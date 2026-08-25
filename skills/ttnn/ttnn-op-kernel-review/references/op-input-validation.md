@@ -37,10 +37,16 @@ The failure shape: an op reads layout, memory config, or shard spec to build its
 validating up front that it supports what it was given**. The result is wrong output or a hang
 instead of a clean `TT_FATAL`.
 
-**1. `.shard_spec().value()` without a sharded guard.** Any dereference of the optional shard spec
-not dominated by `is_sharded()`, `shard_spec().has_value()`, or an equivalent `TT_FATAL` — including
-dereferences inside the validation hook itself, and in helpers the hook calls. The helper case is
-the one that gets missed.
+**1. `.shard_spec().value()` without a sufficient guard.** Any dereference of the optional shard
+spec not dominated by `shard_spec().has_value()` or an equivalent `TT_FATAL` — including dereferences
+inside the validation hook itself, and in helpers the hook calls. The helper case is the one that
+gets missed.
+
+> **`is_sharded()` is not a sufficient guard, and treating it as one is itself the bug.** It returns
+> true for `ND_SHARDED`, and an ND-sharded `MemoryConfig` is constructed with `shard_spec` set to
+> `std::nullopt` — the spec lives in `nd_shard_spec()` instead. So `if (is_sharded()) { …
+> shard_spec().value() … }` throws on an ND-sharded tensor. Guard on `has_value()`, or branch on the
+> layout and handle ND explicitly.
 
 **2. A validation hook that never mentions layout.** A `validate_on_program_cache_miss()` or
 `validate()` that checks dtype, storage type and shapes but never constrains `layout()` or

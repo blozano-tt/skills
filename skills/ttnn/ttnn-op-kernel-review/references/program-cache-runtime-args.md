@@ -32,11 +32,15 @@ Calling `create_descriptor()` from `override_runtime_arguments()` pays the full 
 cost on every cache *hit*. Measured cliffs in the tens-of-times range.
 
 - **Rebuild hidden behind a helper — the primary case.** The override body is short and clean but
-  calls a helper that invokes `create_descriptor()`, `apply_descriptor_runtime_args()`,
-  `split_work_to_cores()`, or otherwise reconstructs the descriptor or core layout. **Trace every
-  function the override calls; one level is rarely enough.** A textual pre-commit guard cannot see
-  through indirection — a reviewer can. Treat "the override body looks fine" as the beginning of the
-  check, not the end.
+  calls a helper that invokes `create_descriptor()`, `split_work_to_cores()`, or otherwise
+  reconstructs the descriptor or core layout. **Trace every function the override calls; one level is
+  rarely enough.** A textual pre-commit guard cannot see through indirection — a reviewer can. Treat
+  "the override body looks fine" as the beginning of the check, not the end.
+- **`apply_descriptor_runtime_args()` is not the same finding.** It applies args from a descriptor
+  that already exists; its cost is the descriptor's size, not a rebuild. Applied against a minimal
+  CB-only descriptor it is a cheap cache-hit repair, and in-tree ops use it that way deliberately.
+  The finding is *what descriptor is being applied* — if the override builds a full one first, the
+  rebuild is the bug and the apply is incidental.
 - **Work-split logic duplicated** rather than shared — recomputing `split_work_to_cores`, core
   ranges or per-core counts inline. Both a host cost and a drift risk; the fix is one shared helper
   called by factory and override.

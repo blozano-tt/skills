@@ -3,16 +3,15 @@
 The nine classes in `SKILL.md` are intra-kernel. This one is **cross-invocation**, and it is the
 reason a kernel can be correct in its own unit test and wrong in production.
 
-LLK kernels program persistent hardware configuration: unpacker tile descriptors and strides, packer
-output formats and L1 offsets, ALU format-spec and accumulate-control fields, ADDR_MOD slots, and
-the software trackers that mirror them. **None of it is reset between kernel invocations.** Whatever
-the previous op left in a config register is what the next op starts with.
+LLK kernels program persistent hardware configuration — unpacker tile descriptors and strides,
+packer formats and L1 offsets, ALU format-spec and accumulate-control fields, ADDR_MOD slots, and
+the software trackers mirroring them. **None of it is reset between invocations.** Whatever the
+previous op left is what the next op starts with.
 
-The bug appears when an op's `_init_` / `_reconfig_` / `_uninit_` path fails to fully re-establish
-the state it depends on, so behaviour depends on **which op ran before it**. Symptom: correct in
+The bug appears when an op's `_init_` / `_reconfig_` / `_uninit_` path fails to re-establish the
+state it depends on, so behaviour depends on **which op ran before it**. Symptom: correct in
 isolation and in its own unit test, wrong only when preceded by another op in a fused sequence or on
-a program-cache-warmed second call. No crash — the packer emits subtly wrong datums, or the pipeline
-hangs.
+a cache-warmed second call. No crash — subtly wrong datums, or a hang.
 
 Roughly thirty merged fix PRs share this root cause. See `SOURCES.md`.
 
@@ -48,14 +47,15 @@ contract it asserts is actually satisfied.
 This is the shape that **breaks the next op rather than itself**, which is why it survives review:
 the failing test names an op that is not the one at fault.
 
-**5. Config rewrite with no execution-unit drain.** Config registers the hardware samples *during*
-an in-flight op must not be reprogrammed while that unit is running. Packer config needs a preceding
-stall on the packer; unpacker config needs the unpacker stalls; math config needs **both** engines,
-math and SFPU.
+**A no-op teardown can be correct.** Where the state an `_init_` installs is transient and
+reprogrammed by the next operation's init, there is genuinely nothing to restore, and the in-tree
+implementations that do this say so in a doc comment. Read the comment before flagging an empty
+`_uninit_` — "the uninit does not restore what the init set" is a question, not a verdict.
 
-**A `THCON`-only stall is the classic insufficient guard** — it orders the GPR-to-config write but
-drains no execution unit. Seeing a stall present is not enough; check *which* unit it drains against
-which unit the config feeds.
+**5. Config rewrite with no execution-unit drain.** Config the hardware samples during an
+in-flight op must not be reprogrammed while that unit is running. **Drain every unit that reads
+the field being written — no more, no less.** This is architecture- and field-specific; see
+`references/config-drain-stalls.md`.
 
 ## Reviewing this class
 
