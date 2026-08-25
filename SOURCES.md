@@ -53,6 +53,27 @@ distilled from an audit of roughly 1,398 merged `fix`-labelled tt-metal PRs. For
 that is stronger grounding — "this shipped 74 times" beats "an expert says watch for it" — so where
 the two disagree on emphasis, the bug_checker framing wins.
 
+## Corrections to upstream sources
+
+Vendoring is not endorsement, and the `bug_checker` rules were vendored before they had been
+reviewed against the code they describe. Four defects were carried in and have since been corrected
+here. Found by a GPT-5.6 analysis posted by [@bbradelTT](https://github.com/bbradelTT) on
+[tt-metal#54114](https://github.com/tenstorrent/tt-metal/pull/54114), and verified against the tree
+before acting.
+
+| Upstream claim | Correction |
+|---|---|
+| `is_sharded()` guards a `shard_spec().value()` dereference | It does not. `is_sharded()` is true for `ND_SHARDED`, whose `MemoryConfig` sets `shard_spec` to `nullopt` — the spec is in `nd_shard_spec()`. Guard on `has_value()` |
+| Math config writes need both math engines drained | Architecture- and field-specific. An FPU-only field needs only the FPU drained; requiring both flags correct code |
+| An `_init_` with a non-restoring `_uninit_` is a bug | A no-op teardown is correct where the state is transient and reprogrammed by the next init. In-tree implementations document this |
+| `apply_descriptor_runtime_args()` is a rebuild | It applies args from an existing descriptor; against a minimal CB-only descriptor it is a cheap cache-hit repair |
+
+Two further defects in those rules — a non-existent `cb.index` field and a deprecated `tt::stl::hash`
+namespace — did not reach this repo, because the code examples containing them were not vendored.
+
+**The drift audit cannot catch this class of error.** It compares *then* against *now*; it has no
+opinion on whether *then* was right. Only reading a rule against the code it describes does.
+
 ## Adapted, not copied verbatim
 
 Every skill here was reshaped for gh-aw consumption. The main structural changes:

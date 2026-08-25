@@ -58,6 +58,12 @@ closest to a real staleness check.
 **A clean audit does not mean the skills are current.** It means nothing moved in the specific paths
 we recorded. If a skill's domain changed somewhere we never recorded, this reports `ok`.
 
+**And it cannot tell you the upstream was wrong when you vendored it.** Drift detection compares
+*then* against *now*; it has no opinion on whether *then* was correct. A defect vendored faithfully
+from a source that was itself mistaken produces a permanently clean audit. This has already happened
+once — see the correction recorded in `SOURCES.md` — and the only thing that catches it is someone
+checking a rule against the code it describes.
+
 ## Triage: which drift matters
 
 Not all drift is worth acting on. Read the diff and sort:
