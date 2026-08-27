@@ -19,6 +19,7 @@
     "tt-review-core",
     "tt-review-router",
     "tt-skills-upstream-audit",
+    "tt-split-pr-by-codeowners",
     "tt-test-coverage-review",
     "tt-trace-review",
     "tt-vllm-serving-review",
