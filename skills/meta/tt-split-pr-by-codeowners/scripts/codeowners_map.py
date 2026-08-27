@@ -46,6 +46,17 @@ from collections import defaultdict
 OWNER = re.compile(r"^(?:@[\w.-]+(?:/[\w.-]+)?|[^@\s]+@[^@\s]+\.[^@\s]+)$")
 
 
+def key(token: str) -> str:
+    """Identity key for an owner token.
+
+    GitHub logins and team slugs are case-insensitive, so `@Author` and
+    `@author` are one principal and must compare equal -- otherwise an
+    exclusion silently misses and the excluded party stays in the cover.
+    Email local-parts are case-sensitive per RFC 5321, so those stay exact.
+    """
+    return token.lower() if token.startswith("@") else token
+
+
 def _translate(glob: str) -> str:
     """Translate a CODEOWNERS glob body into a regex body."""
     out: list[str] = []
@@ -92,8 +103,14 @@ def compile_pattern(pattern: str) -> re.Pattern[str]:
 
 
 def parse(text: str) -> list[tuple[str, re.Pattern[str], tuple[str, ...]]]:
-    """Parse CODEOWNERS into (pattern, regex, owners) in file order."""
+    """Parse CODEOWNERS into (pattern, regex, owners) in file order.
+
+    Owner spellings are canonicalised to the first one seen for each identity,
+    so `@Foo` on one rule and `@foo` on another become a single principal rather
+    than two -- which would otherwise inflate the cover.
+    """
     rules = []
+    canonical: dict[str, str] = {}
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split("#", 1)[0].strip()
         if not line:
@@ -107,7 +124,8 @@ def parse(text: str) -> list[tuple[str, re.Pattern[str], tuple[str, ...]]]:
             bad = [t for t in rest if not OWNER.match(t)]
             print(f"warning: line {lineno}: skipping rule, bad owner(s) {bad}", file=sys.stderr)
             continue
-        rules.append((pattern, compile_pattern(pattern), tuple(sorted(set(owners)))))
+        canon = tuple(canonical.setdefault(key(o), o) for o in owners)
+        rules.append((pattern, compile_pattern(pattern), tuple(sorted(set(canon)))))
     return rules
 
 
@@ -159,12 +177,13 @@ def minimum_cover(
     Returns (cover, exact, unsatisfiable). `exact` is False only if the node
     budget ran out, leaving the cover a valid upper bound rather than a minimum.
     """
+    barred = {key(o) for o in exclude}
     groups: set[frozenset[str]] = set()
     unsatisfiable: set[tuple[str, ...]] = set()
     for owners in owner_sets:
         if not owners:
             continue
-        eligible = frozenset(o for o in owners if o not in exclude)
+        eligible = frozenset(o for o in owners if key(o) not in barred)
         if eligible:
             groups.add(eligible)
         else:
@@ -207,6 +226,9 @@ def main() -> int:
     ap.add_argument("--exclude", default="",
                     help="comma-separated owners who cannot approve -- above all the "
                          "PR author, who GitHub never accepts on their own PR")
+    ap.add_argument("--approved", default="",
+                    help="comma-separated logins who have already approved (all of "
+                         "them, owners or not); reports what is still outstanding")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
@@ -264,6 +286,17 @@ def main() -> int:
     # of two. The real cost is whichever binds harder.
     approvals = max(len(cover), args.required_approvals)
 
+    # What is still outstanding, given approvals already submitted. An approver
+    # who owns a rule satisfies it; every approver counts toward the branch
+    # floor whether they own anything or not.
+    approvers = [a.strip() for a in args.approved.split(",") if a.strip()]
+    done = {key(a if a.startswith("@") else "@" + a) for a in approvers}
+    open_sets = [c for c in clusters if c and not (done & {key(o) for o in c})]
+    remaining, remaining_exact, _ = minimum_cover(open_sets, exclude=excluded)
+    outstanding = max(len(remaining), args.required_approvals - len(approvers))
+    blocked = sorted(p for p, (_pat, o) in per_file.items()
+                     if o and not (done & {key(x) for x in o}))
+
     if args.json:
         json.dump(
             {
@@ -277,6 +310,11 @@ def main() -> int:
                 "unsatisfiable_rules": [list(u) for u in unsatisfiable],
                 "required_approvals_floor": args.required_approvals,
                 "approvals_needed": approvals,
+                "already_approved": approvers,
+                "remaining_cover": remaining,
+                "remaining_is_exact": remaining_exact,
+                "approvals_outstanding": max(outstanding, 0),
+                "files_still_blocked": blocked,
                 "per_file": {
                     p: {"matched_pattern": pat, "owners": list(o)}
                     for p, (pat, o) in sorted(per_file.items())
@@ -314,6 +352,16 @@ def main() -> int:
     if args.required_approvals > len(cover):
         print(f"\nBase branch requires {args.required_approvals} approvals regardless,")
         print(f"so the real floor is {approvals}, not {len(cover)}.")
+    if approvers:
+        print(f"\nAlready approved: {', '.join(approvers)}")
+        if remaining:
+            print(f"Still outstanding ({max(outstanding, 0)}): {', '.join(remaining)}")
+            print(f"{len(blocked)} of {len(paths)} files still blocked:")
+            for path in blocked:
+                print(f"  {path}")
+        else:
+            print(f"Code-owner review is satisfied; {max(outstanding, 0)} approval(s) "
+                  "outstanding against the branch floor.")
     if excluded:
         print(f"\nExcluded as ineligible: {', '.join(sorted(excluded))}")
     for owners in unsatisfiable:

@@ -11,41 +11,36 @@ metadata:
 
 Given a pull request, work out who has to approve it and propose a split where each piece needs
 fewer of them. User-invoked, and in `meta/` because it needs an authenticated `gh`: per
-[ADR-0002](../../../.agents/adr/0002-self-containment.md) a skill on the review path may not depend
-on external tooling, so this one is never pinned by a review workflow.
+[ADR-0002](../../../.agents/adr/0002-self-containment.md) a review-path skill may not depend on
+external tooling, so this one is never pinned by a review workflow.
 
-**It plans. It does not execute.** It emits a proposal and stops — no branches, no pushes, nothing
-written to GitHub. `references/executing-the-split.md` records the recipe for whoever carries it out.
+**It plans. It does not execute** — a proposal, then it stops. No branches, no pushes, nothing
+written to GitHub. `references/executing-the-split.md` has the recipe for whoever carries it out.
 
 ## Why approvals and not diff size
 
 A large diff is not automatically a hard review: what costs a reviewer is the number of independent
-decisions held at once, and a 5,000-file mechanical rename is one decision. Thresholding on size
-flags exactly the PRs that do not need splitting. Blocking approvals are computable, and each is a
-person who must act before the PR lands — on tt-metal, `.github/CODEOWNERS` is ~573 active rules
-across ~160 owners.
+decisions held at once, and a 5,000-file mechanical rename is one decision. Size flags exactly the
+PRs that do not need splitting. Blocking approvals are computable, and each is a person who must act
+before the PR lands — on tt-metal, `.github/CODEOWNERS` is ~573 rules across ~160 owners.
 
-**Count approvals, not owners.** Owners on a single CODEOWNERS rule are *alternatives* — GitHub
-requires "an approval from any of the owners", not all of them. A PR matching 36 owners can be
-unblocked by 7 approvals, and splitting on the larger number proposes work that buys nothing.
-`scripts/codeowners_map.py` reports both, and takes the branch's own `required_approving_review_count`
-as a floor: coverage is not the only gate.
+**Count approvals, not owners.** Owners on one rule are *alternatives* — GitHub requires "an
+approval from any of the owners", not all. A PR matching 36 owners can be unblocked by 7 approvals,
+and splitting on the larger number buys nothing. `scripts/codeowners_map.py` reports both, and takes
+the branch's `required_approving_review_count` as a floor: coverage is not the only gate.
 
-## Constraints
+## Constraints — lead with these; they settle most cases before any analysis
 
-Lead with these when asked a split-planning question; they decide most cases before any analysis.
-
-- Every slice must **stand on its own twice over**: green when merged alone, and coherent as a
-  single idea to whoever reads it. A lower approval count never buys an incoherent PR.
+- Every slice must **stand on its own twice over**: green when merged alone, and coherent as one
+  idea to whoever reads it. A lower approval count never buys an incoherent PR.
 - **A behaviour change ships with its test.** Never separate them to shed a reviewer.
 - When a later slice consumes something an earlier one renames, whatever keeps the old spelling
-  working belongs in the **earlier** slice, and the dependency is stated in both.
-- **Recommending no split is a valid, expected outcome.** Say it plainly when the PR is one decision,
-  or when its owner sets overlap enough that a couple of approvals already cover everything.
-- **Price every proposal**: N× CI, N× review latency, a rebase chain. Recommend against your own
-  split when the cost exceeds the saving.
-- Splitting is cheapest before the code is written. On an open PR the work already exists, so the
-  bar for proposing one is higher than it would be at planning time.
+  working belongs in the **earlier** slice, with the dependency stated in both.
+- **Recommending no split is a valid, expected outcome** — say so plainly when the PR is one
+  decision, or its owner sets overlap enough that a couple of approvals already cover everything.
+- **Price every proposal**: N× CI, N× review latency, a rebase chain. Argue against your own split
+  when the cost exceeds the saving. On an open PR the work already exists, so the bar is higher
+  than it would be at planning time.
 
 ## Workflow
 
@@ -53,6 +48,7 @@ Lead with these when asked a split-planning question; they decide most cases bef
 
 ```bash
 gh pr view <n> --repo <owner>/<repo> --json baseRefName,changedFiles,title,author,reviewRequests
+gh api repos/<owner>/<repo>/pulls/<n>/reviews --jq '[.[]|select(.state=="APPROVED")|.user.login]|unique'
 ```
 
 **Everything downstream keys off `baseRefName`** — ownership, protection and merge base all resolve
@@ -60,22 +56,25 @@ against the PR's base, which is often not `main`.
 
 ### 2. Fetch inputs without truncating them
 
-`gh pr view --json files` silently caps at 100 files, and this skill's whole target is PRs larger
-than that. Paginate, and fetch CODEOWNERS from the base branch by GitHub's location precedence.
-`references/fetching-pr-data.md` has the commands and the two other ways to get this wrong.
+`gh pr view --json files` silently caps at 100, and this skill's target is PRs larger than that.
+Paginate, and fetch CODEOWNERS from the base branch by GitHub's location precedence —
+`references/fetching-pr-data.md` has the commands and the other ways to get this wrong.
 
 ### 3. Resolve ownership
 
 ```bash
-<paginated file list> | python3 scripts/codeowners_map.py \
-  --codeowners CODEOWNERS.base --expect-files <n> \
-  --required-approvals <count> --exclude "@<pr-author>" --json
+<paginated file list> | python3 scripts/codeowners_map.py \\
+  --codeowners CODEOWNERS.base --expect-files <n> --required-approvals <count> \\
+  --exclude "@<pr-author>" --approved "<logins who approved>" --json
 ```
 
-**Pass the PR author to `--exclude`.** GitHub never accepts the author as a reviewer of their own
-PR, so leaving them in the candidate pool yields a minimum that cannot happen — for rules
-`{author, A}` and `{author, B}` the author alone appears to cover both at a cost of one, when the
-real answer is two. Add anyone else known to be ineligible for the same reason.
+**Pass the PR author to `--exclude`.** GitHub never accepts the author on their own PR, so leaving
+them in the pool yields a minimum that cannot happen — for rules `{author, A}` and `{author, B}`
+the author alone appears to cover both at a cost of one, when the answer is two.
+
+**Pass everyone who has approved to `--approved`.** The cover is a property of the PR;
+`approvals_outstanding` and `files_still_blocked` are what someone actually wants when they ask why
+a PR needs so many reviewers. Often the honest answer is "it does not any more — go ask one person."
 
 Do not read CODEOWNERS by eye — last-match-wins, owner alternatives and empty-owner resets are all
 silent when got wrong. See `references/codeowners-semantics.md`, and
@@ -83,15 +82,15 @@ silent when got wrong. See `references/codeowners-semantics.md`, and
 
 ### 4. Sanity-check, do not "validate"
 
-Compare against `reviewRequests` as a smell test only; it proves nothing in either direction.
-Account for every difference or call the parse unverified.
+Compare against `reviewRequests` as a smell test only; it proves nothing either way. Account for
+every difference or call the parse unverified.
 
 ### 5. Propose, then stop
 
-Cluster by owner set, merge clusters that add no new approver, and stop once the next split saves
-nothing. Wide mechanical refactors take the expand / migrate / contract sequence, with migrate
-batches cut along owner-set boundaries. Strategy and the rules that override the objective are in
-`references/split-strategy.md`. Output the proposal and hand it over; create nothing.
+Cluster by owner set, merge clusters that add no new approver, stop once the next split saves
+nothing. Wide mechanical refactors take expand / migrate / contract, with migrate batches cut along
+owner-set boundaries. Strategy and the overriding rules are in `references/split-strategy.md`.
+Output the proposal and hand it over; create nothing.
 
 ## Output
 
@@ -99,8 +98,8 @@ batches cut along owner-set boundaries. Strategy and the rules that override the
 ## Current
 
 <n> files on base <branch>. <m> owners matched, but <a> approvals would unblock it: <who>.
-<If the branch floor binds: "the branch requires <k> regardless, so the real number is <k>.">
-<If any rule is owned only by ineligible people, say so: those files cannot clear review at all.>
+Already approved: <who>. Still outstanding: <k> — <who> — blocking <j> of <n> files.
+<If the branch floor binds, or a rule is owned only by ineligible people, say so.>
 Cross-checked against reviewRequests: <agrees | differs, because ...>
 
 ## Proposed

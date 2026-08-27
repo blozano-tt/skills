@@ -52,7 +52,15 @@ A cover is only meaningful over people who *can* approve, so pass the PR author 
 GitHub never accepts them on their own PR, and leaving them in yields a minimum that cannot happen.
 Rules owned solely by excluded people land in `unsatisfiable_rules` — nobody can clear those files.
 
+`--approved` takes everyone who has already approved and reports `remaining_cover`,
+`approvals_outstanding` and `files_still_blocked` — the numbers someone asking "why does this need
+so many reviewers?" actually wants.
+
+Owner identities compare case-insensitively (`@Author` and `@author` are one principal, as on
+GitHub); email tokens stay exact, since RFC 5321 local-parts are case-sensitive.
+
 One known bias, in the safe direction: a named user who is also in a listed team counts as a
-separate principal, so the cover may run one high. It never runs low.
+separate principal, so the cover may run one high. The same applies to `--approved` — an approval
+from a team member is not credited to that team's rule. Neither ever runs low.
 
 Feeding it the right inputs is its own problem — see `references/fetching-pr-data.md`.
