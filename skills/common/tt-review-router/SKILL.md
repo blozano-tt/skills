@@ -31,7 +31,7 @@ skills.** If a diff genuinely spans more than two domains, it is usually two rev
 | `**/kernels/**`, `**/*_kernel.cpp`, `**/device/**/*_program_factory.*` | `ttnn-op-kernel-review` |
 | Program descriptor, CB config, `split_work_to_cores`, blocking or work-split | `tt-l1-memory-review` |
 | `ttnn/**/*.py`, `models/**/*.py` (model bringup, layout, memory config) | `tt-model-bringup-review` |
-| `tt_metal/tt-llk/**` | `llk-race-audit-review`, and `llk-perf-audit-review` for SFPU or perf changes |
+| `tt_metal/tt-llk/**` | `llk-api-contract-review` plus one of `llk-race-audit-review` (hazard-shaped diffs) or `llk-perf-audit-review` (SFPU or perf changes) |
 | CCL, fabric, mesh, `all_gather`, `reduce_scatter`, `all_reduce` | `tt-multichip-ccl-review` |
 | Trace capture or replay, program cache | `tt-trace-review` |
 | Dtype, fidelity, `*_cache_dtype`, precision config | `tt-precision-review` |

@@ -73,6 +73,7 @@ rules, and the do-not-flag guards that every other skill assumes and does not re
 
 | Skill | Reviews |
 |---|---|
+| `llk-api-contract-review` | The LLK API and hardware-state contract, guards, architecture parity, metal propagation, cleanup |
 | `llk-race-audit-review` | Nine race hazard classes and the cross-class seams, under a monotonic join contract |
 | `llk-perf-audit-review` | Static Tensix perf under a provenance lens and a semantic-equivalence gate |
 
@@ -109,7 +110,8 @@ one.
 | [`tt-metal`](https://github.com/tenstorrent/tt-metal) — `.agents` | [@yieldthought](https://github.com/yieldthought) | Optimization rules, multichip, tracing, datatype sweep, vLLM integration — and the Codex PR-review skill this catalogue's output format came from |
 | [`tt-metal`](https://github.com/tenstorrent/tt-metal) — `tt-llk/.claude` | [@ndivnicTT](https://github.com/ndivnicTT) | The LLK audit suite as a whole |
 | ⤷ `race-audit-all` | [@amahmudTT](https://github.com/amahmudTT) | Nine hazard classes, the monotonic JOIN contract, per-architecture divergence |
-| ⤷ `perf-optimization-audit` | [@fvranicTT](https://github.com/fvranicTT) | The provenance lens, semantic-equivalence gate, SIMD false-positive guards |
+| ⤷ `perf-optimization-audit` | [@fvranicTT](https://github.com/fvranicTT) | The provenance lens, semantic-equivalence gate, SIMD false-positive guards, and the A–F check catalogue |
+| [`tenstorrent/llk_code_gen`](https://github.com/tenstorrent/llk_code_gen) — `dashboard/pr_review/knowledge` | [@nstamatovicTT](https://github.com/nstamatovicTT) | The LLK review rubric: the API and hardware-state contract, guards, architecture parity, metal propagation, and the cleanup patterns the team consistently flags |
 | [`tt-metal`](https://github.com/tenstorrent/tt-metal) — `.github/bug_checker` | [@stevendae](https://github.com/stevendae) | Rules distilled from ~1,398 merged fix PRs: program-cache correctness, op validation, CCL ring buffers, stale LLK config. Strong evidence of which failures *recur*; see [`SOURCES.md`](SOURCES.md) for four of its technical claims we corrected |
 | [`tt-metal`](https://github.com/tenstorrent/tt-metal) — `tech_reports/Handling_Special_Value` | [@ttmtrajkovic](https://github.com/ttmtrajkovic) | NaN/Inf/denormal semantics and the FPU/SFPU divergence |
 
@@ -127,8 +129,8 @@ one.
 | [`tenstorrent/tt-ai-workflow`](https://github.com/tenstorrent/tt-ai-workflow) — `examples/kernel_gen` | [@rlesliehurdTT](https://github.com/rlesliehurdTT) | Reviewed in full. Its special-values documentation pointed us at the public tt-metal tech report, which we used instead. The generation pipeline, templates, and API reference are about *producing* kernels rather than reviewing them, so they were left alone |
 
 **If your work is here and the attribution is wrong, thin, or you would rather it were not — open an
-issue and we will fix or remove it.** Everything vendored is Apache-2.0, but licence compliance and
-proper credit are different things, and we care about the second one.
+issue and we will fix or remove it.** Licence compliance and proper credit are different things, and
+we care about the second one.
 
 ## Provenance and drift
 
@@ -141,4 +143,8 @@ that applies to every re-vendor**.
 
 ## Licence
 
-Apache-2.0, as are all four upstream sources.
+Apache-2.0. Four of the five upstream sources are Apache-2.0 too. The fifth,
+`tenstorrent/llk_code_gen`, carries **no licence file** — it is an internal repository, so vendoring
+from it rests on the disclosure approval recorded in
+[ADR-0004](.agents/adr/0004-llk-code-gen-vendoring.md) rather than on an open licence. If that is
+not the intent, the `llk-api-contract-review` skill is the only thing sourced from it.

@@ -1,7 +1,7 @@
 # Sources and attribution
 
 This repo is an **aggregation**. Almost nothing here is original: the skills are vendored,
-adapted, and re-shaped from work done by other people in four Tenstorrent repositories. This file
+adapted, and re-shaped from work done by other people in five Tenstorrent repositories. This file
 records where each piece came from and who wrote it.
 
 Attribution is the point. Repo names alone are not enough — credit belongs to people, so the table
@@ -17,16 +17,20 @@ vendor from.
 |---|---|---|
 | `tenstorrent/tt-buddy` | private | Reviewer cast and the shared reviewer contract; CCL and matmul knowledge |
 | `tenstorrent/tt_ops_code_gen` | private | Static-analysis checklist, L1 footprint discipline, memory and precision references |
+| `tenstorrent/llk_code_gen` | private, **unlicensed** | LLK review rubric: API and hardware-state contract, guards, parity, metal propagation, cleanup |
 | `tenstorrent/tt-metal` @ `agentic-research/fast-models-fast` | public | `.agents` skills: optimize, multichip, tracing, datatype-sweep, vllm-integration |
 | `tenstorrent/tt-metal` @ `main` | public | `tt_metal/tt-llk/.claude`: race audits and the SFPU perf audit; `.github/bug_checker/rules` |
 | Codex skill `tt-metal-pr-review` | — | PR-review checklist, TTNN dealloc and vLLM-DP false-positive guards |
 
-All four repositories are Apache-2.0, as is this one.
+Four of the five are Apache-2.0, as is this one. `llk_code_gen` has **no licence file**: it is an
+internal repository, so vendoring from it rests on a disclosure decision rather than an open
+licence. See [ADR-0004](.agents/adr/0004-llk-code-gen-vendoring.md) — that gate is still open.
 
-## Two upstreams are private and this repo is public
+## Three upstreams are private and this repo is public
 
 Content from `tt-buddy` and `tt_ops_code_gen` was copied into a public repository deliberately, with
-approval. Two consequences worth stating plainly:
+approval. `llk_code_gen` is a third private upstream **without** that approval yet — see
+[ADR-0004](.agents/adr/0004-llk-code-gen-vendoring.md). Two consequences worth stating plainly:
 
 1. **Naming those repositories here discloses that they exist** and roughly how they are laid out.
    That is a much smaller disclosure than the vendored text itself, and attribution was judged worth
@@ -122,6 +126,7 @@ Regenerate it after any re-vendor rather than editing by hand.
 | `tt-test-coverage-review` | `tenstorrent/tt_ops_code_gen` | `skills/golden-tests/SKILL.md` | `e9c9417eee23` | mstaletovicTT, djordjenTT, dstoiljkovicTT |
 | `tt-vllm-serving-review` | `tenstorrent/tt-metal` | `.agents/skills/vllm-integration/SKILL.md` | `d58cb341c703` | yieldthought, tchedaTT |
 | `tt-vllm-serving-review` | `tenstorrent/tt-buddy` | `knowledge/recipes/vllm` | `ba9021417442` | ppetrovicTT, viktorpusTT |
+| `llk-api-contract-review` | `tenstorrent/llk_code_gen` | `dashboard/pr_review/knowledge/review-rubric.md` | `f45ebabd3c7e` | nstamatovicTT |
 | `llk-perf-audit-review` | `tenstorrent/tt-metal` | `tt_metal/tt-llk/.claude/skills/perf-optimization-audit` | `ce91f33c0c71` | fvranicTT |
 | `llk-perf-audit-review` | `tenstorrent/tt-metal` | `tech_reports/Handling_Special_Value/special_values.md` | `ce91f33c0c71` | blozano-tt, ttmtrajkovic, jasondavies, ndivnicTT |
 | `llk-race-audit-review` | `tenstorrent/tt-metal` | `tt_metal/tt-llk/.claude/skills/race-audit-all` | `ce91f33c0c71` | amahmudTT |
