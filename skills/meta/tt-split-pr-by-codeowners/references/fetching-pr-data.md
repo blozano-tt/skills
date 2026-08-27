@@ -21,8 +21,9 @@ maps against rules that are not in force.
 ```bash
 found=""
 for p in .github/CODEOWNERS CODEOWNERS docs/CODEOWNERS; do
-  if gh api "repos/<o>/<r>/contents/$p?ref=$BASE" --jq '.content' 2>/dev/null \
-       | base64 -d > CODEOWNERS.base && [ -s CODEOWNERS.base ]; then
+  if gh api -H "Accept: application/vnd.github.raw" \
+       "repos/<o>/<r>/contents/$p?ref=$BASE" > CODEOWNERS.base 2>/dev/null \
+     && [ -s CODEOWNERS.base ]; then
     found="$p"; break
   fi
 done
@@ -34,6 +35,11 @@ echo "using $found"
 parses as zero rules, which makes every file look unowned — "no approvals needed", stated with full
 confidence, off a transient auth blip. The matcher refuses a rule-less file too, so the guard holds
 even if this snippet is skipped.
+
+**Ask for the raw media type.** The Contents API's default JSON leaves `.content` empty above 1 MB,
+while GitHub loads a CODEOWNERS up to 3 MB — so a valid 1–3 MB file decodes to nothing and reads as
+missing. At 3 MB and over GitHub loads none of it, and the matcher refuses rather than reporting
+ownership that is not in force.
 
 Slashed branch names need no encoding: `?ref=` is a query value, and `branches/<name>` and
 `rules/branches/<name>` both resolve them raw (verified on `sadesoye/H3_attention`). If the PR edits

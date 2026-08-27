@@ -135,9 +135,11 @@ def _greedy(groups: set[frozenset[str]]) -> list[str]:
 
 
 def minimum_cover(
-    owner_sets: list[tuple[str, ...]], node_budget: int = 200_000
-) -> tuple[list[str], bool]:
-    """Smallest set of approvers hitting every owned rule, and whether it is exact.
+    owner_sets: list[tuple[str, ...]],
+    exclude: frozenset[str] = frozenset(),
+    node_budget: int = 200_000,
+) -> tuple[list[str], bool, list[tuple[str, ...]]]:
+    """Smallest set of eligible approvers hitting every owned rule.
 
     Each rule's owners are alternatives, so one member unblocks that rule and the
     fewest approvals is a minimum hitting set. That is NP-hard in general, but
@@ -145,12 +147,30 @@ def minimum_cover(
     answer so far settles real inputs immediately -- a 174-file tt-metal PR with
     12 distinct owner sets proves optimality in 14 nodes. Greedy seeds the bound.
 
-    Returns (cover, exact). `exact` is False only if the node budget ran out, in
-    which case the cover is a valid upper bound rather than a proven minimum.
+    `exclude` drops owners who cannot satisfy the requirement -- above all the PR
+    author, who GitHub never accepts as a reviewer of their own PR. Optimising
+    over raw tokens instead produces a minimum that cannot happen: given rules
+    {author, A} and {author, B}, the author alone "covers" both for a claimed
+    cost of one, when the real answer is two.
+
+    A rule whose owners are all excluded cannot be satisfied by anyone and is
+    returned separately rather than silently dropped.
+
+    Returns (cover, exact, unsatisfiable). `exact` is False only if the node
+    budget ran out, leaving the cover a valid upper bound rather than a minimum.
     """
-    groups = {frozenset(s) for s in owner_sets if s}
+    groups: set[frozenset[str]] = set()
+    unsatisfiable: set[tuple[str, ...]] = set()
+    for owners in owner_sets:
+        if not owners:
+            continue
+        eligible = frozenset(o for o in owners if o not in exclude)
+        if eligible:
+            groups.add(eligible)
+        else:
+            unsatisfiable.add(tuple(sorted(owners)))
     if not groups:
-        return [], True
+        return [], True, sorted(unsatisfiable)
     best = sorted(_greedy(groups))
     state = {"nodes": 0, "exact": True}
 
@@ -171,7 +191,7 @@ def minimum_cover(
             search({g for g in remaining if owner not in g}, chosen + [owner])
 
     search(groups, [])
-    return best, state["exact"]
+    return best, state["exact"], sorted(unsatisfiable)
 
 
 def main() -> int:
@@ -184,15 +204,29 @@ def main() -> int:
     ap.add_argument("--required-approvals", type=int, default=0,
                     help="required_approving_review_count on the base branch; the "
                          "cover cannot go below this floor")
+    ap.add_argument("--exclude", default="",
+                    help="comma-separated owners who cannot approve -- above all the "
+                         "PR author, who GitHub never accepts on their own PR")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
     try:
-        with open(args.codeowners, encoding="utf-8") as handle:
-            rules = parse(handle.read())
+        with open(args.codeowners, "rb") as handle:
+            blob = handle.read()
     except OSError as exc:
         print(f"error: cannot read {args.codeowners}: {exc}", file=sys.stderr)
         return 2
+    if len(blob) >= 3 * 1024 * 1024:
+        # GitHub does not load a CODEOWNERS at or above 3 MB: no owners are
+        # shown and none are requested. Parsing it anyway would report ownership
+        # that is not in force.
+        print(
+            f"error: {args.codeowners} is {len(blob)} bytes. GitHub does not load a "
+            "CODEOWNERS of 3 MB or more, so nothing in it is enforced.",
+            file=sys.stderr,
+        )
+        return 2
+    rules = parse(blob.decode("utf-8", errors="replace"))
     if not rules:
         # An empty file is what a swallowed fetch failure looks like. Left
         # unchecked it reports every path as unowned -- "no approvals needed" --
@@ -223,7 +257,8 @@ def main() -> int:
     for path, (_pattern, owners) in per_file.items():
         clusters[owners].append(path)
     matched = sorted({o for _p, owners in per_file.values() for o in owners})
-    cover, exact = minimum_cover(list(clusters))
+    excluded = frozenset(o.strip() for o in args.exclude.split(",") if o.strip())
+    cover, exact, unsatisfiable = minimum_cover(list(clusters), exclude=excluded)
     # Code-owner coverage is not the only gate: the branch may also demand a
     # fixed number of approvals, and a one-owner cover cannot satisfy a floor
     # of two. The real cost is whichever binds harder.
@@ -238,6 +273,8 @@ def main() -> int:
                 "matched_owner_count": len(matched),
                 "approval_cover": cover,
                 "cover_is_exact": exact,
+                "excluded_from_cover": sorted(excluded),
+                "unsatisfiable_rules": [list(u) for u in unsatisfiable],
                 "required_approvals_floor": args.required_approvals,
                 "approvals_needed": approvals,
                 "per_file": {
@@ -277,6 +314,11 @@ def main() -> int:
     if args.required_approvals > len(cover):
         print(f"\nBase branch requires {args.required_approvals} approvals regardless,")
         print(f"so the real floor is {approvals}, not {len(cover)}.")
+    if excluded:
+        print(f"\nExcluded as ineligible: {', '.join(sorted(excluded))}")
+    for owners in unsatisfiable:
+        print(f"\nWARNING: no eligible owner for a rule owned only by {' or '.join(owners)}.")
+        print("Those files cannot clear code-owner review as things stand.")
     return 0
 
 

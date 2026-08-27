@@ -19,12 +19,11 @@ written to GitHub. `references/executing-the-split.md` records the recipe for wh
 
 ## Why approvals and not diff size
 
-A large diff is not automatically a hard review. What costs a reviewer is the number of independent
-decisions held at once, which does not track line count — a 5,000-file mechanical rename is one
-decision. Thresholding on size flags exactly the PRs that do not need splitting.
-
-Blocking approvals are computable, and each one is a person who must act before the PR can land.
-On tt-metal this is not theoretical: `.github/CODEOWNERS` is ~573 active rules across ~160 owners.
+A large diff is not automatically a hard review: what costs a reviewer is the number of independent
+decisions held at once, and a 5,000-file mechanical rename is one decision. Thresholding on size
+flags exactly the PRs that do not need splitting. Blocking approvals are computable, and each is a
+person who must act before the PR lands — on tt-metal, `.github/CODEOWNERS` is ~573 active rules
+across ~160 owners.
 
 **Count approvals, not owners.** Owners on a single CODEOWNERS rule are *alternatives* — GitHub
 requires "an approval from any of the owners", not all of them. A PR matching 36 owners can be
@@ -69,11 +68,18 @@ than that. Paginate, and fetch CODEOWNERS from the base branch by GitHub's locat
 
 ```bash
 <paginated file list> | python3 scripts/codeowners_map.py \
-  --codeowners CODEOWNERS.base --expect-files <n> --required-approvals <count> --json
+  --codeowners CODEOWNERS.base --expect-files <n> \
+  --required-approvals <count> --exclude "@<pr-author>" --json
 ```
 
-Do not read CODEOWNERS by eye. Last-match-wins, owner alternatives and empty-owner resets are all
-silent when got wrong — see `references/codeowners-semantics.md`.
+**Pass the PR author to `--exclude`.** GitHub never accepts the author as a reviewer of their own
+PR, so leaving them in the candidate pool yields a minimum that cannot happen — for rules
+`{author, A}` and `{author, B}` the author alone appears to cover both at a cost of one, when the
+real answer is two. Add anyone else known to be ineligible for the same reason.
+
+Do not read CODEOWNERS by eye — last-match-wins, owner alternatives and empty-owner resets are all
+silent when got wrong. See `references/codeowners-semantics.md`, and
+`references/is-it-enforced.md` for whether the base branch requires code-owner review at all.
 
 ### 4. Sanity-check, do not "validate"
 
@@ -94,12 +100,13 @@ batches cut along owner-set boundaries. Strategy and the rules that override the
 
 <n> files on base <branch>. <m> owners matched, but <a> approvals would unblock it: <who>.
 <If the branch floor binds: "the branch requires <k> regardless, so the real number is <k>.">
+<If any rule is owned only by ineligible people, say so: those files cannot clear review at all.>
 Cross-checked against reviewRequests: <agrees | differs, because ...>
 
 ## Proposed
 
 ### PR 1 — <what it does, as one idea>
-Approvals: <who>       (was <a>, now 1)
+Approvals: <who>       (was <a>, now <recomputed for this slice, floor included>)
 Files:     <paths, or a pattern plus a count>
 Depends on: —
 

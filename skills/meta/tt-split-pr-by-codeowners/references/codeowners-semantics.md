@@ -43,35 +43,16 @@ reads as "these files are unowned" rather than as an error.
 `scripts/codeowners_map.py` implements all of the above in stdlib Python. A model reasoning over 573
 rules is right most of the time, and the times it is wrong are silent.
 
-It reports `matched_owners` (everyone the rules name, before GitHub filters out the author and
-anyone without write access) and `approval_cover` (who must actually act). Optimise the second. The
-cover is an exact minimum hitting set proved by branch and bound; `cover_is_exact` goes `false` only
-if the search budget runs out, leaving an upper bound. `approvals_needed` is
-`max(cover, --required-approvals)`, since the branch's required-approval count is a floor.
+It reports `matched_owners` (every owner the rules name, pre-filter) and `approval_cover` (who must
+actually act). Optimise the second. The cover is an exact minimum hitting set proved by branch and
+bound; `cover_is_exact` goes `false` only if the search budget runs out, leaving an upper bound.
+`approvals_needed` is `max(cover, --required-approvals)` — the branch's own count is a floor.
+
+A cover is only meaningful over people who *can* approve, so pass the PR author to `--exclude`:
+GitHub never accepts them on their own PR, and leaving them in yields a minimum that cannot happen.
+Rules owned solely by excluded people land in `unsatisfiable_rules` — nobody can clear those files.
+
+One known bias, in the safe direction: a named user who is also in a listed team counts as a
+separate principal, so the cover may run one high. It never runs low.
 
 Feeding it the right inputs is its own problem — see `references/fetching-pr-data.md`.
-
-## Confirm code-owner review is enforced at all
-
-Worth doing once per base branch, and the obvious check answers wrongly: classic branch protection
-and rulesets are separate mechanisms, and a repo may use either or both.
-
-```bash
-gh api "repos/<o>/<r>/branches/$BASE/protection" \
-  --jq '{owner: .required_pull_request_reviews.require_code_owner_reviews,
-         count: .required_pull_request_reviews.required_approving_review_count}'
-gh api "repos/<o>/<r>/rules/branches/$BASE" \
-  --jq '[.[] | select(.type=="pull_request") | .parameters]
-        | {owner: map(.require_code_owner_review) | any,
-           count: map(.required_approving_review_count) | max}'
-```
-
-On tt-metal's `main` the first says `false` for code-owner review and the second says
-`[false, true]` — two overlapping rulesets, which GitHub composes **most restrictive**. It is
-required. Reading only the first says the opposite, and would make this skill look pointless on the
-repo it matters most for.
-
-**Take `required_approving_review_count` too and pass it as `--required-approvals`.** Coverage is
-not the only gate: if the branch demands two approvals, a slice with a one-owner cover still needs
-two, so the honest number is `max(cover, required_count)` — and N slices multiply that floor N
-times. Ignoring it understates the current cost and the proposal's.
