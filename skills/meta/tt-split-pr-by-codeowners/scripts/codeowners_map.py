@@ -120,27 +120,58 @@ def owners_for(path: str, rules) -> tuple[str, tuple[str, ...]]:
     return match
 
 
-def minimum_cover(owner_sets: list[tuple[str, ...]]) -> list[str]:
-    """Greedily pick approvers covering every owned rule.
-
-    Each set is a group of alternatives, so one member unblocks it. Choosing the
-    fewest approvers is a minimum hitting set -- NP-hard, so this is the standard
-    greedy approximation and may occasionally pick one more than strictly needed.
-    Treat it as an upper bound on the true minimum, and the union as the number
-    of review requests GitHub will actually send.
-    """
-    remaining = {frozenset(s) for s in owner_sets if s}
-    chosen: list[str] = []
+def _greedy(groups: set[frozenset[str]]) -> list[str]:
+    remaining, chosen = set(groups), []
     while remaining:
         counts: dict[str, int] = defaultdict(int)
         for group in remaining:
             for owner in group:
                 counts[owner] += 1
-        # Sort by name after count so the result is deterministic.
+        # Break count ties by name so the result is deterministic.
         best = min(counts.items(), key=lambda kv: (-kv[1], kv[0]))[0]
         chosen.append(best)
         remaining = {g for g in remaining if best not in g}
-    return sorted(chosen)
+    return chosen
+
+
+def minimum_cover(
+    owner_sets: list[tuple[str, ...]], node_budget: int = 200_000
+) -> tuple[list[str], bool]:
+    """Smallest set of approvers hitting every owned rule, and whether it is exact.
+
+    Each rule's owners are alternatives, so one member unblocks that rule and the
+    fewest approvals is a minimum hitting set. That is NP-hard in general, but
+    branching on the *smallest* uncovered rule and pruning against the best
+    answer so far settles real inputs immediately -- a 174-file tt-metal PR with
+    12 distinct owner sets proves optimality in 14 nodes. Greedy seeds the bound.
+
+    Returns (cover, exact). `exact` is False only if the node budget ran out, in
+    which case the cover is a valid upper bound rather than a proven minimum.
+    """
+    groups = {frozenset(s) for s in owner_sets if s}
+    if not groups:
+        return [], True
+    best = sorted(_greedy(groups))
+    state = {"nodes": 0, "exact": True}
+
+    def search(remaining: set[frozenset[str]], chosen: list[str]) -> None:
+        nonlocal best
+        if not remaining:
+            if len(chosen) < len(best):
+                best = sorted(chosen)
+            return
+        if len(chosen) + 1 >= len(best):
+            return  # cannot beat the incumbent
+        state["nodes"] += 1
+        if state["nodes"] > node_budget:
+            state["exact"] = False
+            return
+        target = min(remaining, key=lambda g: (len(g), sorted(g)))
+        for owner in sorted(target):
+            search({g for g in remaining if owner not in g}, chosen + [owner])
+
+    search(groups, [])
+    return best, state["exact"]
 
 
 def main() -> int:
@@ -150,6 +181,9 @@ def main() -> int:
     ap.add_argument("--files-from", help="file of paths; default is stdin")
     ap.add_argument("--expect-files", type=int,
                     help="changed_files from the API; errors if the input is short")
+    ap.add_argument("--required-approvals", type=int, default=0,
+                    help="required_approving_review_count on the base branch; the "
+                         "cover cannot go below this floor")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
@@ -158,6 +192,16 @@ def main() -> int:
             rules = parse(handle.read())
     except OSError as exc:
         print(f"error: cannot read {args.codeowners}: {exc}", file=sys.stderr)
+        return 2
+    if not rules:
+        # An empty file is what a swallowed fetch failure looks like. Left
+        # unchecked it reports every path as unowned -- "no approvals needed" --
+        # which is the confidently wrong answer this tool exists to prevent.
+        print(
+            f"error: {args.codeowners} yielded no usable rules. Refusing, because "
+            "an empty CODEOWNERS makes every file look unowned.",
+            file=sys.stderr,
+        )
         return 2
 
     source = open(args.files_from, encoding="utf-8") if args.files_from else sys.stdin
@@ -178,18 +222,24 @@ def main() -> int:
     clusters: dict[tuple[str, ...], list[str]] = defaultdict(list)
     for path, (_pattern, owners) in per_file.items():
         clusters[owners].append(path)
-    requested = sorted({o for _p, owners in per_file.values() for o in owners})
-    cover = minimum_cover(list(clusters))
+    matched = sorted({o for _p, owners in per_file.values() for o in owners})
+    cover, exact = minimum_cover(list(clusters))
+    # Code-owner coverage is not the only gate: the branch may also demand a
+    # fixed number of approvals, and a one-owner cover cannot satisfy a floor
+    # of two. The real cost is whichever binds harder.
+    approvals = max(len(cover), args.required_approvals)
 
     if args.json:
         json.dump(
             {
                 "rules": len(rules),
                 "files": len(paths),
-                "requested_reviewers": requested,
-                "requested_count": len(requested),
-                "minimum_approvals": cover,
-                "minimum_approval_count": len(cover),
+                "matched_owners": matched,
+                "matched_owner_count": len(matched),
+                "approval_cover": cover,
+                "cover_is_exact": exact,
+                "required_approvals_floor": args.required_approvals,
+                "approvals_needed": approvals,
                 "per_file": {
                     p: {"matched_pattern": pat, "owners": list(o)}
                     for p, (pat, o) in sorted(per_file.items())
@@ -216,12 +266,17 @@ def main() -> int:
         if len(files) > 8:
             print(f"        ... and {len(files) - 8} more")
         print()
-    print(f"Review requests GitHub will send ({len(requested)}):")
-    for owner in requested:
+    print(f"Owners matched across the diff ({len(matched)}) -- GitHub will request a")
+    print("subset of these, dropping the author and anyone without write access:")
+    for owner in matched:
         print(f"  {owner}")
-    print(f"\nApprovals that would actually unblock it ({len(cover)}, greedy upper bound):")
+    qualifier = "proven minimum" if exact else "upper bound, search truncated"
+    print(f"\nApprovals that would unblock it ({len(cover)}, {qualifier}):")
     for owner in cover:
         print(f"  {owner}")
+    if args.required_approvals > len(cover):
+        print(f"\nBase branch requires {args.required_approvals} approvals regardless,")
+        print(f"so the real floor is {approvals}, not {len(cover)}.")
     return 0
 
 

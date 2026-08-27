@@ -20,7 +20,7 @@ The right number still says nothing about *coherence*, hence the rules below.
 ## Clustering
 
 1. Compute the owner set per file (`scripts/codeowners_map.py`); files sharing one are the natural
-   grain, and the script emits those clusters directly, largest first.
+   grain, and the script emits those clusters, largest first.
 2. The largest cluster is usually PR 1.
 3. Merge a cluster into a larger one when that adds no approver — including any it *overlaps*, since
    one shared owner covers both. Unowned files are free anywhere.
@@ -33,10 +33,10 @@ The right number still says nothing about *coherence*, hence the rules below.
 **A behaviour change and its test belong in the same slice.** Never separate them to shed an
 approver. Correctness is not reviewable in a PR whose evidence landed somewhere else.
 
-**A split that separates a change from its reason is rejected**, even when it reduces group count.
-This is the failure mode of optimising on ownership: file ownership cuts across concerns, so it is
-possible to produce a PR that touches exactly one group and means nothing on its own. Each PR must
-be reviewable as one idea, not merely mergeable.
+**A split that separates a change from its reason is rejected**, even when it saves an approval.
+That is the failure mode of optimising on ownership: ownership cuts across concerns, so you can
+produce a PR touching exactly one owner set that means nothing alone. Each PR must be reviewable as
+one idea, not merely mergeable.
 
 **Every slice compiles and passes on its own.** Where a later slice consumes something an earlier
 one renames, whatever keeps the old spelling working — alias, re-export, deprecation wrapper —
@@ -47,9 +47,9 @@ order, so an unstated one is a broken build waiting for someone to merge out of 
 
 ## Wide mechanical refactors
 
-The case that looks unsplittable: one mechanical change whose blast radius fans across thousands of
-call sites. No vertical slice lands green, so the usual advice does not apply. Sequence it as
-**expand / migrate / contract**:
+The case that looks unsplittable: one mechanical change fanning across thousands of call sites. No
+vertical slice lands green, so the usual advice fails. Sequence it as **expand / migrate /
+contract**:
 
 1. **Expand.** Add the new form beside the old so nothing breaks. The only PR in the sequence
    holding a decision, and small enough to get real scrutiny rather than being buried in noise.
@@ -67,14 +67,15 @@ be, at this cost" — a decision for a human.
 
 ## When to recommend not splitting
 
-A confident **do not split** is a first-class output, not a failure. Say it plainly when:
+A confident **do not split** is a first-class output. Say it plainly when:
 
 - one or two approvals already cover every file — there is nothing to win;
-- the change is one decision spread across many files, and splitting would produce N PRs that must
-  all land together: N review contexts, none independently correct;
-- the split would need a shim whose cost exceeds the latency it saves;
+- the change is one decision spread wide, so splitting yields N PRs that must land together: N
+  review contexts, none independently correct;
+- the shim it would need costs more than the latency it saves;
 - the base branch does not enforce code-owner review (check both mechanisms — see
   `references/codeowners-semantics.md`).
 
-Always state the price of the split you propose: N× CI, N× review latency, and a rebase chain to
-maintain. If that exceeds the saving, recommend against your own proposal.
+State the price: N× CI, N× review latency, a rebase chain — and note that a branch's
+required-approval count applies to *every* slice, so N slices cost N× that floor however cleanly
+ownership divides. If the total exceeds the saving, argue against your own proposal.

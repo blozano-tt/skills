@@ -27,9 +27,10 @@ Blocking approvals are computable, and each one is a person who must act before 
 On tt-metal this is not theoretical: `.github/CODEOWNERS` is ~573 active rules across ~160 owners.
 
 **Count approvals, not owners.** Owners on a single CODEOWNERS rule are *alternatives* — GitHub
-requires "an approval from any of the owners", not all of them. A PR showing 36 requested reviewers
-can be unblocked by 7 approvals, and splitting on the larger number proposes work that buys nothing.
-`scripts/codeowners_map.py` reports both.
+requires "an approval from any of the owners", not all of them. A PR matching 36 owners can be
+unblocked by 7 approvals, and splitting on the larger number proposes work that buys nothing.
+`scripts/codeowners_map.py` reports both, and takes the branch's own `required_approving_review_count`
+as a floor: coverage is not the only gate.
 
 ## Constraints
 
@@ -67,8 +68,8 @@ than that. Paginate, and fetch CODEOWNERS from the base branch by GitHub's locat
 ### 3. Resolve ownership
 
 ```bash
-<paginated file list> \
-  | python3 scripts/codeowners_map.py --codeowners CODEOWNERS.base --expect-files <n> --json
+<paginated file list> | python3 scripts/codeowners_map.py \
+  --codeowners CODEOWNERS.base --expect-files <n> --required-approvals <count> --json
 ```
 
 Do not read CODEOWNERS by eye. Last-match-wins, owner alternatives and empty-owner resets are all
@@ -91,7 +92,8 @@ batches cut along owner-set boundaries. Strategy and the rules that override the
 ```
 ## Current
 
-<n> files on base <branch>. <r> reviewers requested, but <a> approvals would unblock it: <who>.
+<n> files on base <branch>. <m> owners matched, but <a> approvals would unblock it: <who>.
+<If the branch floor binds: "the branch requires <k> regardless, so the real number is <k>.">
 Cross-checked against reviewRequests: <agrees | differs, because ...>
 
 ## Proposed
