@@ -46,6 +46,7 @@ rules, and the do-not-flag guards that every other skill assumes and does not re
 | `tt-test-coverage-review` | PCC bars, tile-boundary cases, program-cache tests, regression tests on bug fixes |
 | `tt-perf-claim-review` | Whether a stated performance number is supported by its measurement |
 | `tt-comment-hygiene-review` | Iteration-journey comments, tribal knowledge, magic values, op docstrings |
+| `tt-split-pr-by-codeowners` | Whether a PR should be split so each piece needs fewer approvals |
 
 ### models — model bringup, TTNN consumers
 
@@ -81,12 +82,11 @@ rules, and the do-not-flag guards that every other skill assumes and does not re
 |---|---|
 | `tt-vllm-serving-review` | Generator contracts, plugin registration, the `tt_data_parallel` ambiguity |
 
-### meta — user-invoked tooling
+### meta — catalogue maintenance
 
 | Skill | Reviews |
 |---|---|
 | `tt-skills-upstream-audit` | Drift between vendored skills and their upstream sources *(user-invoked)* |
-| `tt-split-pr-by-codeowners` | Whether a PR should be split so each piece needs fewer approvals *(user-invoked)* |
 
 ## Credit
 
