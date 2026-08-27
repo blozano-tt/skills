@@ -19,7 +19,14 @@ None of that survives being copied into a CI runner.
 ## Decision
 
 A skill on the review path must not require an MCP server, hooks, a sibling directory, a cross-skill
-invocation, an interactive prompt, hardware or external tooling, non-stdlib Python, or a symlink.
+invocation, an interactive prompt, hardware, non-stdlib Python, a symlink, or **any tooling the CI
+runner does not already provide**.
+
+The test is availability in the runner, not whether something counts as "external". `gh` passes it:
+every GitHub Actions runner ships it preinstalled and authenticated via `GITHUB_TOKEN`, so a skill
+that shells out to `gh` survives being copied into a runner exactly as a stdlib Python script does.
+The consumer must allow it in `tools.bash` — a smaller ask than the ones above, and one that fails
+loudly at compile time rather than silently at review time.
 
 Two consequences that are easy to get wrong:
 
@@ -37,10 +44,14 @@ was briefly a symlink to `CLAUDE.md`; it is now a real file with a test assertin
 
 ## The exemption
 
-`meta/` is exempt. `tt-skills-upstream-audit` needs `gh` and `pyyaml` — it is user-invoked
-maintenance tooling, never pinned by a review workflow, and it degrades to a warning rather than a
-crash when either is missing. `test_review_path_scripts_are_stdlib_only` encodes the exemption
+`meta/` is exempt. `tt-skills-upstream-audit` needs `pyyaml` — a pip install, which no runner
+guarantees — and it is maintenance tooling for this catalogue rather than a review skill, so it is
+never pinned by a review workflow. `test_review_path_scripts_are_stdlib_only` encodes the exemption
 rather than leaving it to memory.
+
+`meta/` is that bucket and no other: tooling that maintains the skills themselves. Needing `gh` is
+not a reason to land there — `tt-split-pr-by-codeowners` was briefly filed under `meta/` on exactly
+that misreading and belongs in `common/`, which is where the buckets-track-teams rule puts it.
 
 ## What is *not* a dependency
 

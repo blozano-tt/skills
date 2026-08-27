@@ -1,7 +1,7 @@
 ---
 name: tt-split-pr-by-codeowners
 description: Decide whether a wide-ranging pull request should be broken up so each piece needs fewer CODEOWNERS approvals, and propose how. Use for 'too many reviewers on this', 'can this be broken up', 'why does this need six approvals'.
-disable-model-invocation: true
+disable-model-invocation: false
 metadata:
   tier: process
   upstream: []
@@ -10,9 +10,10 @@ metadata:
 # Split a PR by CODEOWNERS approvals
 
 Given a pull request, work out who has to approve it and propose a split where each piece needs
-fewer of them. User-invoked, and in `meta/` because it needs an authenticated `gh`: per
-[ADR-0002](../../../.agents/adr/0002-self-containment.md) a review-path skill may not depend on
-external tooling, so this one is never pinned by a review workflow.
+fewer of them. Reads the PR through `gh`, which
+[ADR-0002](../../../.agents/adr/0002-self-containment.md) permits on the review path because every
+Actions runner ships it authenticated. A workflow pinning this skill must allow `gh` and `python3`
+in its `tools.bash` list.
 
 **It plans. It does not execute** — a proposal, then it stops. No branches, no pushes, nothing
 written to GitHub. `references/executing-the-split.md` has the recipe for whoever carries it out.

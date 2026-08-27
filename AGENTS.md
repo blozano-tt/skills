@@ -27,14 +27,14 @@ never auto-applies.
 ## Self-containment
 
 gh-aw copies **one skill folder**. A skill on the review path must not require: an MCP server,
-hooks, a sibling directory, a cross-skill invocation, an interactive prompt, hardware or external
-tooling, non-stdlib Python, or a symlink.
+hooks, a sibling dir, a cross-skill invocation, an interactive prompt, hardware, non-stdlib Python,
+a symlink, or **tooling the runner lacks**. `gh` is allowed; list it in the consumer's `tools.bash`.
 
 - A `references/` path may only point **inside its own skill folder**. Where two skills need the
   same reference, duplicate it and add the path to `DUPLICATED` in the test suite, which asserts the
   copies stay identical.
 - Cross-skill mentions are prose, not imports. A skill pinned alone still works.
-- **`meta/` is the single exemption** — user-invoked maintenance tooling, never pinned by a review.
+- **`meta/` is the single exemption** — tooling that maintains the skills. Needing `gh` is not.
 
 See [ADR-0002](.agents/adr/0002-self-containment.md).
 
