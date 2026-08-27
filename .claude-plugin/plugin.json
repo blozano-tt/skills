@@ -8,6 +8,7 @@
   "license": "Apache-2.0",
   "homepage": "https://github.com/blozano-tt/skills",
   "skills": [
+    "llk-api-contract-review",
     "llk-perf-audit-review",
     "llk-race-audit-review",
     "tt-comment-hygiene-review",

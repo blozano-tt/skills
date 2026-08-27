@@ -2,11 +2,11 @@
 
 Rules for the skill catalogue. Reasoning lives in `.agents/adr/` — read the relevant ADR before
 *changing* a rule, not before following one. This repo is an **aggregation**: vendored copies from
-four repositories, two private. Copies rot, and provenance is load-bearing.
+five repositories, three private. Copies rot, and provenance is load-bearing.
 
 ## Vendoring
 
-Two upstreams are private; this repo is public. When bringing text across, strip:
+Three upstreams are private; this repo is public. When bringing text across, strip:
 
 1. **Internal-only pointers** — Confluence page IDs, ticket links, intranet URLs. Dead links here,
    not secrets. Replace with a description of what the source establishes.
@@ -14,8 +14,8 @@ Two upstreams are private; this repo is public. When bringing text across, strip
    instructions.
 3. **Anything a disclosure owner asks you to strip.** Their call, not yours.
 
-**Architecture detail stays, including Quasar** — do not re-expand this scope by instinct. See
-[ADR-0001](.agents/adr/0001-vendoring-scope.md), recording an abstention tried and reversed.
+**Architecture detail stays, including Quasar** — do not re-expand by instinct. [ADR-0001](.agents/adr/0001-vendoring-scope.md) records an abstention tried and reversed.
+**An unlicensed source needs approval, not a strip list** — [ADR-0004](.agents/adr/0004-llk-code-gen-vendoring.md).
 
 **Vendoring is not endorsement.** No source wins a technical disagreement by provenance, however
 well-evidenced; check a rule against the code it describes first. Four defects entered behind a

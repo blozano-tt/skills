@@ -87,6 +87,12 @@ and should not:
 | `NON-ISSUE (guarded)` | Matched a pattern, killed by a guard or the provenance lens. Record it so it is not re-raised. |
 | `UNCERTAIN` | Cannot resolve the pinned compiler or throughput facts. Abstain and mark coverage bounded. |
 
+**`PERF-WIN` requires an assembly diff, so in CI review it is normally out of reach.** These claims
+are about the emitted instruction stream; `references/validation-and-output.md` proves them with
+`objdump`. Without that toolchain you cannot discharge "provably", so **`SUGGESTION` is the
+ceiling** — say what a disassembly would need to show. Reading "provably" as "obviously" is the
+likeliest way to misuse this skill.
+
 **Never guess a latency or throughput number.** An invented cycle count is the most damaging thing
 this skill can produce, because it is precise, plausible, and unfalsifiable without a rerun.
 
@@ -109,3 +115,16 @@ Where you cannot reach the grounding for the architecture in question, return `U
 coverage bounded. That is the rule from the verdict table applied per-architecture, and it matters
 most here: **a guessed latency number is the most damaging output this skill can produce**, because
 it is precise, plausible, and unfalsifiable without a rerun.
+
+## Reference map
+
+Above is the contract; below is what to look *for*. Read the file for the phase you are in. The
+method and validation files assume a developer machine — take their checks, not their toolchain.
+
+- **`references/overview-and-method.md`** — the six-step method and candidate enumeration.
+- **`references/checks-traffic-loops-shadows.md`** — **A** Dst/LReg traffic, **C** loop and template
+  structure, **D** latency shadows (*raw `TTI_*` only*), **F** `TT_`→`TTI_` on compile-time operands.
+- **`references/checks-selection-and-fusion.md`** — **B** instruction selection and strength
+  reduction (usually the biggest wins), **E** fusion and reconfig above the loop.
+- **`references/validation-and-output.md`** — the disassembly proof, the perf-counter metrics worth
+  naming in a comment, and the report shape.
