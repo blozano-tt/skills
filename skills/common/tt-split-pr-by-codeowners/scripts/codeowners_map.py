@@ -279,7 +279,18 @@ def main() -> int:
     for path, (_pattern, owners) in per_file.items():
         clusters[owners].append(path)
     matched = sorted({o for _p, owners in per_file.values() for o in owners})
-    excluded = frozenset(o.strip() for o in args.exclude.split(",") if o.strip())
+    # Accept a bare login for --exclude as well as "@login". key() only
+    # lowercases a token that starts with "@", so a bare one never matched the
+    # "@login" CODEOWNERS spells -- the exclusion silently did nothing while
+    # excluded_from_cover still listed the name, which reads as applied. That
+    # is the one failure this flag exists to prevent, so normalise like
+    # --approved already does. An email token is left alone: it is a principal
+    # in its own right and must not grow an "@".
+    excluded = frozenset(
+        o.strip() if ("@" in o.strip()[1:] or o.strip().startswith("@")) else "@" + o.strip()
+        for o in args.exclude.split(",")
+        if o.strip()
+    )
     cover, exact, unsatisfiable = minimum_cover(list(clusters), exclude=excluded)
     # Code-owner coverage is not the only gate: the branch may also demand a
     # fixed number of approvals, and a one-owner cover cannot satisfy a floor
